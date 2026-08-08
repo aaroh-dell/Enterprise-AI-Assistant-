@@ -1,7 +1,15 @@
 from fastapi import APIRouter
 
-router = APIRouter(prefix="/employees", tags=["employees"])
+router = APIRouter()
 
-@router.get("/")
-def get_employees():
-    return {"status": "Employees API ready"}
+employees = {
+    "101": {"name": "Aaroh", "department": "Engineering"},
+    "102": {"name": "Priya", "department": "HR"},
+}
+
+@router.get("/employees/{employee_id}")
+def get_employee(employee_id: str):
+    emp = employees.get(employee_id)
+    if emp is None:
+        return {"error": "Employee not found"}
+    return {"employee_id": employee_id, **emp}

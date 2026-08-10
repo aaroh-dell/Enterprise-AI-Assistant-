@@ -1,4 +1,5 @@
 import os
+import requests  # NEW (Step 4): lets Python make HTTP calls to your backend
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -6,6 +7,35 @@ from google.genai import types
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
+# ============================================================
+# NEW (Step 4): The tool function itself.
+# This is plain Python — it calls your Phase 4 backend over HTTP,
+# exactly like your browser did when you visited /leave/101.
+# ============================================================
+def get_leave_balance(employee_id: str):
+    """Fetch an employee's real leave balance from the backend API."""
+    response = requests.get(f"http://127.0.0.1:8000/leave/{employee_id}")
+    return response.json()
+
+def get_employee_info(employee_id: str):
+    """Fetch an employee's name and department from the backend API."""
+    response = requests.get(f"http://127.0.0.1:8000/employees/{employee_id}")
+    return response.json()
+
+
+def create_ticket(employee_id: str, issue: str):
+    """Create a new IT support ticket for an employee and return the ticket details."""
+    response = requests.post(
+        "http://127.0.0.1:8000/tickets",
+        params={"employee_id": employee_id, "issue": issue},
+    )
+    return response.json()
+
+
+# NOTE: I also updated the guardrail text below, since the old version
+# told the AI it has NO access to real data - that's no longer true now
+# that we're giving it a tool. Leaving the old wording in would confuse
+# the model into refusing even when it CAN look things up.
 SYSTEM_PROMPT = """
 You are EnterpriseAssist, an internal AI assistant for company employees.
 
@@ -19,25 +49,31 @@ SCOPE:
 BEHAVIOR RULES:
 - Always confirm key details (dates, amounts, reasons) before saying you'll submit anything.
 - Keep responses short and professional - 2 to 4 sentences unless more detail is requested.
-- Never invent data. You currently have NO access to real company systems
-  (no leave balances, ticket status, or expense data). If asked for real data,
-  say clearly that you can't retrieve it yet, instead of guessing a number.
+- You have tools to check an employee's real leave balance, look up employee info,
+  and create IT support tickets. Use them whenever a request needs real data or
+  a real action - do not guess or claim something is done if you haven't called the tool.
+- Before creating a ticket, confirm the employee ID and a clear description of the issue.
+- If a tool call fails or the employee isn't found, say so honestly.
 
 EXAMPLES:
 
 User: I need 3 days off next week.
 EnterpriseAssist: I can help with that. Could you confirm the exact dates and the reason (personal, medical, or other)?
 
-User: How many leave days do I have left?
-EnterpriseAssist: I don't have access to your real leave balance yet — that feature isn't connected. Once it is, I'll be able to check it for you directly.
-
 User: What's the capital of France?
 EnterpriseAssist: That's outside what I help with here — I'm focused on HR, IT, Finance, and Travel matters for employees.
 """
 
+# ============================================================
+# NEW (Step 5): Give the model the list of tools it's allowed to use.
+# This is just a list containing the function itself - not calling it,
+# just handing the AI the *capability*.
+# ============================================================
+tools = [get_leave_balance, get_employee_info, create_ticket]
+
 chat_history = []
 
-print("EnterpriseAssist v2 (with memory) — type 'exit' to quit\n")
+print("EnterpriseAssist v3 (with tool calling) — type 'exit' to quit\n")
 
 while True:
     user_input = input("You: ")
@@ -51,6 +87,7 @@ while True:
         contents=chat_history,
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
+            tools=tools,  # NEW (Step 6): this line is what turns tool calling on
         ),
     )
 

@@ -31,6 +31,25 @@ def create_ticket(employee_id: str, issue: str):
     )
     return response.json()
 
+def submit_leave(employee_id: str, start_date: str, end_date: str, reason: str):
+    """Submit a leave application for an employee with start date, end date, and reason."""
+    response = requests.post(
+        "http://127.0.0.1:8000/leave/apply",
+        json={
+            "employee_id": employee_id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "reason": reason,
+        },
+    )
+    return response.json()
+
+
+def get_holiday_calendar():
+    """Fetch the company holiday calendar."""
+    response = requests.get("http://127.0.0.1:8000/holidays")
+    return response.json()
+
 
 # NOTE: I also updated the guardrail text below, since the old version
 # told the AI it has NO access to real data - that's no longer true now
@@ -69,7 +88,7 @@ EnterpriseAssist: That's outside what I help with here — I'm focused on HR, IT
 # This is just a list containing the function itself - not calling it,
 # just handing the AI the *capability*.
 # ============================================================
-tools = [get_leave_balance, get_employee_info, create_ticket]
+tools = [get_leave_balance, get_employee_info, create_ticket, submit_leave, get_holiday_calendar]
 
 chat_history = []
 
@@ -94,3 +113,4 @@ while True:
     print(f"AI: {response.text}\n")
 
     chat_history.append(types.Content(role="model", parts=[types.Part(text=response.text)]))
+

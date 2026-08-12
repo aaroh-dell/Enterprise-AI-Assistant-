@@ -50,6 +50,19 @@ def get_holiday_calendar():
     response = requests.get("http://127.0.0.1:8000/holidays")
     return response.json()
 
+def reset_password(employee_id: str):
+    """Trigger a password reset for an employee's account."""
+    response = requests.post(
+        "http://127.0.0.1:8000/it/password-reset",
+        params={"employee_id": employee_id},
+    )
+    return response.json()
+
+
+def check_ticket_status(ticket_id: int):
+    """Check the status of an existing IT support ticket by its ID."""
+    response = requests.get(f"http://127.0.0.1:8000/tickets/{ticket_id}")
+    return response.json()
 
 # NOTE: I also updated the guardrail text below, since the old version
 # told the AI it has NO access to real data - that's no longer true now
@@ -88,7 +101,7 @@ EnterpriseAssist: That's outside what I help with here — I'm focused on HR, IT
 # This is just a list containing the function itself - not calling it,
 # just handing the AI the *capability*.
 # ============================================================
-tools = [get_leave_balance, get_employee_info, create_ticket, submit_leave, get_holiday_calendar]
+tools = [get_leave_balance, get_employee_info, create_ticket, submit_leave, get_holiday_calendar, reset_password, check_ticket_status]
 
 chat_history = []
 

@@ -1,19 +1,19 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-import json
+from backend.database import SessionLocal, Employee
 
 router = APIRouter()
-
-with open("backend/data/employees.json") as f:
-    employees_data = json.load(f)
 
 
 @router.get("/leave/{employee_id}")
 def get_leave_balance(employee_id: str):
-    emp = employees_data.get(employee_id)
+    db = SessionLocal()
+    emp = db.query(Employee).filter(Employee.employee_id == employee_id).first()
+    db.close()
+
     if emp is None:
         return {"error": "Employee not found"}
-    return {"employee_id": employee_id, "leave_balance": emp["leave_balance"]}
+    return {"employee_id": emp.employee_id, "leave_balance": emp.leave_balance}
 
 
 class LeaveRequest(BaseModel):
@@ -22,11 +22,15 @@ class LeaveRequest(BaseModel):
     end_date: str
     reason: str
 
-leave_requests = []
+leave_requests = []  # still in-memory for now - Step 9 will migrate this too
 
 @router.post("/leave/apply")
 def apply_leave(request: LeaveRequest):
-    if request.employee_id not in employees_data:
+    db = SessionLocal()
+    emp = db.query(Employee).filter(Employee.employee_id == request.employee_id).first()
+    db.close()
+
+    if emp is None:
         return {"error": "Employee not found"}
 
     leave_requests.append(request.dict())

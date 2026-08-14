@@ -1,22 +1,20 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
+import json
 
 router = APIRouter()
 
+with open("backend/data/employees.json") as f:
+    employees_data = json.load(f)
 
-# Fake in-memory "database" - just a Python dict for now
-leave_balances = {
-    "101": 12,
-    "102": 5,
-    "103": 20,
-}
 
 @router.get("/leave/{employee_id}")
 def get_leave_balance(employee_id: str):
-    balance = leave_balances.get(employee_id)
-    if balance is None:
+    emp = employees_data.get(employee_id)
+    if emp is None:
         return {"error": "Employee not found"}
-    return {"employee_id": employee_id, "leave_balance": balance}
+    return {"employee_id": employee_id, "leave_balance": emp["leave_balance"]}
+
 
 class LeaveRequest(BaseModel):
     employee_id: str
@@ -24,13 +22,11 @@ class LeaveRequest(BaseModel):
     end_date: str
     reason: str
 
-# Fake in-memory storage for submitted leave requests
 leave_requests = []
 
 @router.post("/leave/apply")
 def apply_leave(request: LeaveRequest):
-    # Deduct the requested leave from balance (simple version - no day-counting logic yet)
-    if request.employee_id not in leave_balances:
+    if request.employee_id not in employees_data:
         return {"error": "Employee not found"}
 
     leave_requests.append(request.dict())
@@ -41,6 +37,7 @@ def apply_leave(request: LeaveRequest):
         "end_date": request.end_date,
         "reason": request.reason,
     }
+
 
 holidays = [
     {"date": "2026-10-02", "name": "Gandhi Jayanti"},

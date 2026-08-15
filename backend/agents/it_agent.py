@@ -7,6 +7,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
+from backend.retry_utils import call_with_retry
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -25,17 +26,21 @@ def build_it_tools(employee_id: str):
     @tool
     def create_ticket(issue: str) -> dict:
         """Create an IT support ticket for the logged-in employee."""
-        return requests.post(f"{BASE_URL}/tickets", params={"employee_id": employee_id, "issue": issue}).json()
+        return call_with_retry(lambda: requests.post(
+            f"{BASE_URL}/tickets", params={"employee_id": employee_id, "issue": issue}
+        ).json())
 
     @tool
     def check_ticket_status(ticket_id: int) -> dict:
         """Check the status of an IT support ticket by its ID."""
-        return requests.get(f"{BASE_URL}/tickets/{ticket_id}").json()
+        return call_with_retry(lambda: requests.get(f"{BASE_URL}/tickets/{ticket_id}").json())
 
     @tool
     def reset_my_password() -> dict:
         """Trigger a password reset for the logged-in employee's account."""
-        return requests.post(f"{BASE_URL}/it/password-reset", params={"employee_id": employee_id}).json()
+        return call_with_retry(lambda: requests.post(
+            f"{BASE_URL}/it/password-reset", params={"employee_id": employee_id}
+        ).json())
 
     return [create_ticket, check_ticket_status, reset_my_password]
 

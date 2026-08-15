@@ -8,6 +8,7 @@ from backend.agents.it_agent import build_it_graph
 from backend.agents.finance_agent import build_finance_graph
 from backend.agents.travel_agent import build_travel_graph
 from backend.agents.knowledge_agent import build_knowledge_graph
+from backend.logger import logger
 
 load_dotenv()
 
@@ -48,7 +49,10 @@ def _classify(user_input: str) -> str:
     decision = text.strip().upper()
 
     valid = {"HR", "IT", "FINANCE", "TRAVEL", "KNOWLEDGE", "OFF_TOPIC"}
-    return decision if decision in valid else "OFF_TOPIC"
+    result = decision if decision in valid else "OFF_TOPIC"
+
+    logger.info(f"Router classified message as: {result}")
+    return result
 
 
 def _extract_text(message):
@@ -105,6 +109,7 @@ def route_and_respond(chat_history, user_input, employee_id, pending_action=None
 
     # ---------- CASE 2: normal turn - classify and delegate ----------
     department = _classify(user_input)
+    logger.info(f"Employee {employee_id} | department={department} | message='{user_input}'")
 
     if department == "OFF_TOPIC":
         reply = "That's outside what I help with here - I'm focused on HR, IT, Finance, Travel, and company policy matters for employees."

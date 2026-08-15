@@ -7,6 +7,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
+from backend.retry_utils import call_with_retry
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -25,20 +26,22 @@ def build_travel_tools(employee_id: str):
     @tool
     def request_travel(destination: str, start_date: str, end_date: str, purpose: str) -> dict:
         """Submit a business travel request for the logged-in employee."""
-        return requests.post(f"{BASE_URL}/travel", json={
+        return call_with_retry(lambda: requests.post(f"{BASE_URL}/travel", json={
             "employee_id": employee_id, "destination": destination,
             "start_date": start_date, "end_date": end_date, "purpose": purpose
-        }).json()
+        }).json())
 
     @tool
     def check_travel_status(travel_id: int) -> dict:
         """Check the status of a travel request by its ID."""
-        return requests.get(f"{BASE_URL}/travel/{travel_id}").json()
+        return call_with_retry(lambda: requests.get(f"{BASE_URL}/travel/{travel_id}").json())
 
     @tool
     def estimate_travel_budget(destination: str, days: int) -> dict:
         """Estimate the travel budget for a trip based on destination and number of days."""
-        return requests.get(f"{BASE_URL}/travel/budget/estimate", params={"destination": destination, "days": days}).json()
+        return call_with_retry(lambda: requests.get(
+            f"{BASE_URL}/travel/budget/estimate", params={"destination": destination, "days": days}
+        ).json())
 
     return [request_travel, check_travel_status, estimate_travel_budget]
 

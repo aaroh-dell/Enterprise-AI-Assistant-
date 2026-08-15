@@ -7,6 +7,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
+from backend.retry_utils import call_with_retry
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -25,24 +26,24 @@ def build_hr_tools(employee_id: str):
     @tool
     def get_my_leave_balance() -> dict:
         """Fetch the logged-in employee's leave balance."""
-        return requests.get(f"{BASE_URL}/leave/{employee_id}").json()
+        return call_with_retry(lambda: requests.get(f"{BASE_URL}/leave/{employee_id}").json())
 
     @tool
     def submit_leave(start_date: str, end_date: str, reason: str) -> dict:
         """Submit a leave application for the logged-in employee."""
-        return requests.post(f"{BASE_URL}/leave/apply", json={
+        return call_with_retry(lambda: requests.post(f"{BASE_URL}/leave/apply", json={
             "employee_id": employee_id, "start_date": start_date, "end_date": end_date, "reason": reason
-        }).json()
+        }).json())
 
     @tool
     def get_holiday_calendar() -> dict:
         """Fetch the company holiday calendar."""
-        return requests.get(f"{BASE_URL}/holidays").json()
+        return call_with_retry(lambda: requests.get(f"{BASE_URL}/holidays").json())
 
     @tool
     def get_my_info() -> dict:
         """Fetch the logged-in employee's name and department."""
-        return requests.get(f"{BASE_URL}/employees/{employee_id}").json()
+        return call_with_retry(lambda: requests.get(f"{BASE_URL}/employees/{employee_id}").json())
 
     return [get_my_leave_balance, submit_leave, get_holiday_calendar, get_my_info]
 

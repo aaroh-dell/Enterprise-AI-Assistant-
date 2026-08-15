@@ -7,6 +7,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
+from backend.retry_utils import call_with_retry
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -25,14 +26,14 @@ def build_finance_tools(employee_id: str):
     @tool
     def submit_expense(amount: float, category: str, description: str) -> dict:
         """Submit an expense reimbursement claim for the logged-in employee."""
-        return requests.post(f"{BASE_URL}/expenses", json={
+        return call_with_retry(lambda: requests.post(f"{BASE_URL}/expenses", json={
             "employee_id": employee_id, "amount": amount, "category": category, "description": description
-        }).json()
+        }).json())
 
     @tool
     def check_reimbursement_status(expense_id: int) -> dict:
         """Check the status of an expense reimbursement claim by its ID."""
-        return requests.get(f"{BASE_URL}/expenses/{expense_id}").json()
+        return call_with_retry(lambda: requests.get(f"{BASE_URL}/expenses/{expense_id}").json())
 
     return [submit_expense, check_reimbursement_status]
 

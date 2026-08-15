@@ -9,6 +9,7 @@ from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
 from langchain_core.messages import ToolMessage
+from backend.rag.vectorstore import search_policies
 
 load_dotenv()
 BASE_URL = "http://127.0.0.1:8000"
@@ -89,11 +90,19 @@ def build_tools(employee_id: str):
         """Estimate the travel budget for a trip based on destination and number of days."""
         return requests.get(f"{BASE_URL}/travel/budget/estimate", params={"destination": destination, "days": days}).json()
 
+    @tool
+    def search_policy(query: str) -> str:
+        """Search company policy documents (leave, benefits, IT, finance policies) for relevant information."""
+        chunks = search_policies(query, k=3)
+        if not chunks:
+            return "No relevant policy information found."
+        return "\n\n---\n\n".join(chunks)
+
     return [
         get_my_leave_balance, get_my_info, create_ticket, submit_leave,
         get_holiday_calendar, reset_my_password, check_ticket_status,
         submit_expense, check_reimbursement_status,
-        request_travel, check_travel_status, estimate_travel_budget,
+        request_travel, check_travel_status, estimate_travel_budget,search_policy
     ]
 
 
@@ -115,6 +124,8 @@ BEHAVIOR RULES:
 - Submitting leave, creating tickets, submitting expenses, and requesting travel
   are handled with a separate confirmation step automatically - just call the
   tool when you have enough information, you don't need to ask "shall I submit?" yourself.
+- When answering policy questions, use the search_policy tool and base your answer strictly on the retrieved text. If the retrieved chunks don't contain the answer, say the policy isn't available rather than guessing.
+- When quoting policy information, refer to the organization as "our company" or "the company" rather than repeating the document's literal company name.
 """
 
 

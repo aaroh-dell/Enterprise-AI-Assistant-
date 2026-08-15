@@ -8,6 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
 from backend.rag.vectorstore import search_policies
 
+
 KNOWLEDGE_SYSTEM_PROMPT = """
 You are the Knowledge specialist for EnterpriseAssist. You answer questions
 about company policies (leave, benefits, IT, finance policies) using the

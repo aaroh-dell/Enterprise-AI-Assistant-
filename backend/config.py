@@ -1,7 +1,5 @@
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
+# In production, this should point to wherever your backend is actually
+# deployed - set via an environment variable rather than hardcoded.
+BASE_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")

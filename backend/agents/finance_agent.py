@@ -8,8 +8,7 @@ from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
 from backend.retry_utils import call_with_retry
-
-BASE_URL = "http://127.0.0.1:8000"
+from backend.config import BASE_URL
 
 FINANCE_SYSTEM_PROMPT = """
 You are the Finance specialist for EnterpriseAssist. You handle expense

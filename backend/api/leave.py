@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from backend.database import SessionLocal, Employee
+from backend.database import SessionLocal, Employee, LeaveRequest as LeaveRequestDB
 
 router = APIRouter()
 
@@ -22,18 +22,26 @@ class LeaveRequest(BaseModel):
     end_date: str
     reason: str
 
-leave_requests = []  # still in-memory for now - Step 9 will migrate this too
 
 @router.post("/leave/apply")
 def apply_leave(request: LeaveRequest):
     db = SessionLocal()
     emp = db.query(Employee).filter(Employee.employee_id == request.employee_id).first()
-    db.close()
 
     if emp is None:
+        db.close()
         return {"error": "Employee not found"}
 
-    leave_requests.append(request.dict())
+    leave_row = LeaveRequestDB(
+        employee_id=request.employee_id,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        reason=request.reason,
+    )
+    db.add(leave_row)
+    db.commit()
+    db.close()
+
     return {
         "status": "submitted",
         "employee_id": request.employee_id,

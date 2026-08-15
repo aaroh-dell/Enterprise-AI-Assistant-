@@ -29,5 +29,46 @@ class Employee(Base):
     role = Column(String)
     leave_balance = Column(Integer)
 
+class LeaveRequest(Base):
+    __tablename__ = "leave_requests"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id = Column(String)
+    start_date = Column(String)
+    end_date = Column(String)
+    reason = Column(String)
+
+
+class Ticket(Base):
+    __tablename__ = "tickets"
+
+    ticket_id = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id = Column(String)
+    issue = Column(String)
+    status = Column(String)
+
+
+class Expense(Base):
+    __tablename__ = "expenses"
+
+    expense_id = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id = Column(String)
+    amount = Column(Float)
+    category = Column(String)
+    description = Column(String)
+    status = Column(String)
+
+
+class TravelRequestDB(Base):
+    __tablename__ = "travel_requests"
+
+    travel_id = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id = Column(String)
+    destination = Column(String)
+    start_date = Column(String)
+    end_date = Column(String)
+    purpose = Column(String)
+    status = Column(String)
+
 
 Base.metadata.create_all(bind=engine)

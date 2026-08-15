@@ -1,21 +1,37 @@
 from fastapi import APIRouter
+from backend.database import SessionLocal, Ticket
 
 router = APIRouter()
 
-tickets = []  # fake in-memory database
-next_id = 1
 
 @router.post("/tickets")
 def create_ticket(employee_id: str, issue: str):
-    global next_id
-    ticket = {"ticket_id": next_id, "employee_id": employee_id, "issue": issue, "status": "open"}
-    tickets.append(ticket)
-    next_id += 1
-    return ticket
+    db = SessionLocal()
+    ticket = Ticket(employee_id=employee_id, issue=issue, status="open")
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)  # pulls the auto-generated ticket_id back into the object
+    db.close()
+
+    return {
+        "ticket_id": ticket.ticket_id,
+        "employee_id": ticket.employee_id,
+        "issue": ticket.issue,
+        "status": ticket.status,
+    }
+
 
 @router.get("/tickets/{ticket_id}")
 def get_ticket(ticket_id: int):
-    for t in tickets:
-        if t["ticket_id"] == ticket_id:
-            return t
-    return {"error": "Ticket not found"}
+    db = SessionLocal()
+    ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+    db.close()
+
+    if ticket is None:
+        return {"error": "Ticket not found"}
+    return {
+        "ticket_id": ticket.ticket_id,
+        "employee_id": ticket.employee_id,
+        "issue": ticket.issue,
+        "status": ticket.status,
+    }

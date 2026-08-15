@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
+from backend.database import SessionLocal, Expense
 
 router = APIRouter()
 
@@ -9,27 +10,45 @@ class ExpenseRequest(BaseModel):
     category: str
     description: str
 
-expenses = []
-next_expense_id = 1
 
 @router.post("/expenses")
 def submit_expense(request: ExpenseRequest):
-    global next_expense_id
-    expense = {
-        "expense_id": next_expense_id,
-        "employee_id": request.employee_id,
-        "amount": request.amount,
-        "category": request.category,
-        "description": request.description,
-        "status": "pending",
+    db = SessionLocal()
+    expense = Expense(
+        employee_id=request.employee_id,
+        amount=request.amount,
+        category=request.category,
+        description=request.description,
+        status="pending",
+    )
+    db.add(expense)
+    db.commit()
+    db.refresh(expense)
+    db.close()
+
+    return {
+        "expense_id": expense.expense_id,
+        "employee_id": expense.employee_id,
+        "amount": expense.amount,
+        "category": expense.category,
+        "description": expense.description,
+        "status": expense.status,
     }
-    expenses.append(expense)
-    next_expense_id += 1
-    return expense
+
 
 @router.get("/expenses/{expense_id}")
 def get_expense_status(expense_id: int):
-    for e in expenses:
-        if e["expense_id"] == expense_id:
-            return e
-    return {"error": "Expense not found"}
+    db = SessionLocal()
+    expense = db.query(Expense).filter(Expense.expense_id == expense_id).first()
+    db.close()
+
+    if expense is None:
+        return {"error": "Expense not found"}
+    return {
+        "expense_id": expense.expense_id,
+        "employee_id": expense.employee_id,
+        "amount": expense.amount,
+        "category": expense.category,
+        "description": expense.description,
+        "status": expense.status,
+    }

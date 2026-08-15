@@ -13,12 +13,20 @@ Design System Specifications:
 - Components: Full-width buttons, uncontained chat inputs, no gradients or shadows.
 """
 
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import streamlit as st
 import requests
 from backend.ai_core import get_ai_response
-import os
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+
+if hasattr(st, "secrets"):
+    for key, value in st.secrets.items():
+        os.environ[key] = str(value)
 
 
 class EnterpriseThemeManager:

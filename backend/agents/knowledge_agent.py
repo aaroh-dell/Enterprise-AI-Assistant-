@@ -16,6 +16,10 @@ search_policy tool. Base your answers strictly on retrieved text. If the
 retrieved chunks don't contain the answer, say the policy isn't available
 rather than guessing. Refer to the organization as "our company", never by
 a name found in the retrieved text.
+
+If the employee just greets you or asks what you can help with, respond
+briefly and conversationally - mention you can help with HR, IT, Finance,
+Travel, and company policy questions. Don't call search_policy for these.
 """
 
 

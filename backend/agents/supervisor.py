@@ -23,8 +23,8 @@ Departments:
 - IT: IT support tickets, ticket status, password resets
 - FINANCE: expense submissions, reimbursement status
 - TRAVEL: business travel requests, travel status, travel budget estimates
-- KNOWLEDGE: questions about company policies (leave policy text, benefits, IT/security policies, finance policies)
-- OFF_TOPIC: anything unrelated to company HR/IT/Finance/Travel/policy matters
+- KNOWLEDGE: questions about company policies (leave policy text, benefits, IT/security policies, finance policies) - ALSO use this for greetings, small talk, or questions about what the assistant can help with, since it will respond conversationally.
+- OFF_TOPIC: anything clearly unrelated to company HR/IT/Finance/Travel/policy matters (e.g. general trivia, personal advice, coding help)
 
 Respond with EXACTLY ONE WORD from: HR, IT, FINANCE, TRAVEL, KNOWLEDGE, OFF_TOPIC
 No punctuation, no explanation - just the single word.

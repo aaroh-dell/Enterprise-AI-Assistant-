@@ -16,6 +16,9 @@ Design System Specifications:
 import streamlit as st
 import requests
 from backend.ai_core import get_ai_response
+import os
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 
 
 class EnterpriseThemeManager:
@@ -683,7 +686,7 @@ with st.sidebar:
             try:
                 # Backend Authentication Call
                 response = requests.post(
-                    url="http://127.0.0.1:8000/login",
+                    url=f"{BACKEND_URL}/login",
                     json={
                         "employee_id": emp_id, 
                         "password": password

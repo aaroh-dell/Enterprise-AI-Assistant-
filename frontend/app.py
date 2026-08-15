@@ -646,6 +646,9 @@ if "chat_history" not in st.session_state:
 if "genai_history" not in st.session_state:
     st.session_state.genai_history = []
 
+if "pending_action" not in st.session_state:
+    st.session_state.pending_action = None
+
 
 # =====================================================================
 # UI COMPONENTS: SIDEBAR (AUTHENTICATION & STATUS)
@@ -744,6 +747,7 @@ with st.sidebar:
             st.session_state.employee_name = None
             st.session_state.chat_history.clear()
             st.session_state.genai_history.clear()
+            st.session_state.pending_action = None  # Prevents stale confirmations leaking
             st.rerun()
 
 
@@ -850,10 +854,11 @@ else:
         # 2. Trigger the AI Backend Generation Cycle
         with st.spinner("Thinking..."):
             try:
-                ai_reply = get_ai_response(
+                ai_reply, st.session_state.pending_action = get_ai_response(
                     st.session_state.genai_history,
                     user_input,
                     st.session_state.employee_id,
+                    st.session_state.pending_action,
                 )
             except Exception as e:
                 # Graceful degradation if AI core fails

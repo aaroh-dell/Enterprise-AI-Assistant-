@@ -5,20 +5,21 @@ from typing import Annotated
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
+from langchain_core.messages import ToolMessage
 
 load_dotenv()
 BASE_URL = "http://127.0.0.1:8000"
 
+SENSITIVE_TOOLS = {"submit_leave", "create_ticket", "submit_expense", "request_travel"}
 
-# ============ STATE ============
+
 class State(TypedDict):
     messages: Annotated[list, add_messages]
 
 
-# ============ TOOLS (bound to a specific logged-in employee) ============
 def build_tools(employee_id: str):
 
     @tool
@@ -108,24 +109,31 @@ SCOPE:
   If asked something out of scope, politely say it's outside what you help with.
 
 BEHAVIOR RULES:
-- Always confirm key details (dates, amounts, reasons) before submitting anything.
 - Keep responses short and professional - 2 to 4 sentences unless more detail is requested.
 - Never invent data - always use tools for real information or actions.
 - If a tool call fails, say so honestly.
+- Submitting leave, creating tickets, submitting expenses, and requesting travel
+  are handled with a separate confirmation step automatically - just call the
+  tool when you have enough information, you don't need to ask "shall I submit?" yourself.
 """
 
 
-def build_graph(employee_id: str):
-    """Builds a fresh graph bound to this employee's tools."""
-    tools = build_tools(employee_id)
+def route_after_chatbot(state: State):
+    last_message = state["messages"][-1]
+    if not getattr(last_message, "tool_calls", None):
+        return END
+    for call in last_message.tool_calls:
+        if call["name"] in SENSITIVE_TOOLS:
+            return END
+    return "tools"
 
+
+def build_graph(tools):
     llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash-lite", api_key=os.getenv("GEMINI_API_KEY"))
     llm_with_tools = llm.bind_tools(tools)
 
     def chatbot_node(state: State):
         messages = state["messages"]
-        # Inject the system prompt at the start of every call, without
-        # permanently storing it inside the saved message history
         full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
         response = llm_with_tools.invoke(full_messages)
         return {"messages": [response]}
@@ -136,30 +144,103 @@ def build_graph(employee_id: str):
     graph_builder.add_node("chatbot", chatbot_node)
     graph_builder.add_node("tools", tool_node)
     graph_builder.add_edge(START, "chatbot")
-    graph_builder.add_conditional_edges("chatbot", tools_condition)
+    graph_builder.add_conditional_edges("chatbot", route_after_chatbot)
     graph_builder.add_edge("tools", "chatbot")
 
     return graph_builder.compile()
 
 
-def get_ai_response(chat_history, user_input, employee_id):
-    """
-    chat_history: a plain list of LangGraph messages (kept in Streamlit's session_state)
-    Returns the AI's text reply, and mutates chat_history in place with the new turns.
-    """
-    graph = build_graph(employee_id)
+def _extract_text(message):
+    if isinstance(message.content, str):
+        return message.content
+    return "".join(block.get("text", "") for block in message.content if isinstance(block, dict))
 
+
+def _describe_action(tool_name: str, args: dict) -> str:
+    descriptions = {
+        "submit_leave": f"submit leave from {args.get('start_date')} to {args.get('end_date')} ({args.get('reason')})",
+        "create_ticket": f"create an IT ticket: \"{args.get('issue')}\"",
+        "submit_expense": f"submit a ₹{args.get('amount')} expense under {args.get('category')} ({args.get('description')})",
+        "request_travel": f"request travel to {args.get('destination')} from {args.get('start_date')} to {args.get('end_date')}",
+    }
+    return descriptions.get(tool_name, f"run {tool_name}")
+
+
+def get_ai_response(chat_history, user_input, employee_id, pending_action=None):
+    """
+    Returns (reply_text, new_pending_action).
+    """
+    tools = build_tools(employee_id)
+    tool_lookup = {t.name: t for t in tools}
+
+    # ---------- CASE 1: waiting on a confirmation ----------
+    if pending_action:
+        decision = user_input.strip().lower()
+
+        if decision in ("yes", "y", "confirm", "yes please", "go ahead", "do it"):
+            tool_obj = tool_lookup[pending_action["tool_name"]]
+            result_data = tool_obj.invoke(pending_action["tool_args"])
+
+            chat_history.append(
+                ToolMessage(
+                    content=str(result_data),
+                    tool_call_id=pending_action["tool_call_id"],
+                    name=pending_action["tool_name"],
+                )
+            )
+
+            # Reuse the same tool-bound graph used for normal turns instead
+            # of a separate bare LLM call - fixes the "prefilling" error,
+            # since Gemini validates tool-response messages against the
+            # tool declarations present in THAT specific request.
+            graph = build_graph(tools)
+            result = graph.invoke({"messages": chat_history})
+
+            chat_history.clear()
+            chat_history.extend(result["messages"])
+
+            return _extract_text(chat_history[-1]), None
+
+        elif decision in ("no", "n", "cancel", "nevermind", "stop"):
+            # Must resolve the pending tool call with a real ToolMessage,
+            # even on cancellation - otherwise the NEXT turn hits the same
+            # unresolved-tool-call error.
+            chat_history.append(
+                ToolMessage(
+                    content="Cancelled by the user - action was not performed.",
+                    tool_call_id=pending_action["tool_call_id"],
+                    name=pending_action["tool_name"],
+                )
+            )
+            cancel_text = "Okay, I've cancelled that - nothing was submitted."
+            chat_history.append({"role": "assistant", "content": cancel_text})
+            return cancel_text, None
+
+        else:
+            return "Please reply 'yes' to confirm or 'no' to cancel.", pending_action
+
+    # ---------- CASE 2: normal turn ----------
     chat_history.append({"role": "user", "content": user_input})
+    graph = build_graph(tools)
     result = graph.invoke({"messages": chat_history})
 
-    reply = result["messages"][-1]
-    if isinstance(reply.content, str):
-        text = reply.content
-    else:
-        text = "".join(block.get("text", "") for block in reply.content if isinstance(block, dict))
-
-    # Replace the caller's history with the full updated conversation
     chat_history.clear()
     chat_history.extend(result["messages"])
 
-    return text
+    last_message = chat_history[-1]
+
+    if getattr(last_message, "tool_calls", None):
+        for call in last_message.tool_calls:
+            if call["name"] in SENSITIVE_TOOLS:
+                new_pending = {
+                    "tool_name": call["name"],
+                    "tool_args": call["args"],
+                    "tool_call_id": call["id"],
+                }
+                question = f"You're about to {_describe_action(call['name'], call['args'])}. Confirm? (yes/no)"
+                # Deliberately NOT appended to chat_history - the model-facing
+                # history must end with the tool-call request until a real
+                # ToolMessage resolves it. The UI shows this via the return value only.
+                return question, new_pending
+
+    return _extract_text(last_message), None

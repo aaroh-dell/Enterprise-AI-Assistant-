@@ -4,6 +4,20 @@ A multi-agent enterprise workplace assistant that lets employees handle HR, IT, 
 
 Built incrementally as a 12-phase learning project: from a basic chatbot with no memory, up through tool calling, an explicit LangGraph agent, enforced human-in-the-loop confirmation, RAG-based policy search, a full multi-agent architecture, and production concerns like logging, retries, and tracing. Full phase-by-phase breakdown in [`docs/phase-notes.md`](docs/phase-notes.md).
 
+## Live demo
+
+**App:** https://aaroh-dell-enterprise-ai-assistant--frontendapp-gmrcy1.streamlit.app/
+**Backend:** https://enterprise-ai-backend-jluy.onrender.com
+
+Try it yourself with these demo logins (fake, Faker-generated employee data — not real people):
+
+| Employee ID | Password |
+|---|---|
+| `1000` | `$g%8Mmj0` |
+| `1001` | `#1$CJaXl` |
+
+> **Note:** the backend is hosted on Render's free tier, which spins down after periods of inactivity to conserve resources. The first request after idle time may take 20-30 seconds while the server restarts — if you see a network/timeout error on first load, wait a moment and retry. This is expected free-tier hosting behavior, not an application bug.
+
 ## What it does
 
 - **HR** — check leave balance, apply for leave, view the holiday calendar, look up employee info
@@ -39,6 +53,7 @@ Each specialist agent is its own scoped LangGraph, with only the tools and syste
 - **Backend**: FastAPI, SQLAlchemy, PostgreSQL
 - **Frontend**: Streamlit
 - **Auth**: employee ID + password login, backed by a Faker-generated employee dataset
+- **Deployment**: Render (backend + PostgreSQL), Streamlit Community Cloud (frontend)
 
 ## Project structure
 

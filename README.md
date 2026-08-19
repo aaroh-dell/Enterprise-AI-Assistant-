@@ -1,6 +1,6 @@
 # EnterpriseAssist AI
 
-A multi-agent enterprise workplace assistant that lets employees handle HR, IT, Finance, and Travel requests — and search company policies — through a single conversational interface, instead of navigating separate internal portals.
+A multi-agent enterprise workplace assistant that lets employees handle HR, IT, Finance, and Travel requests and search company policies — through a single conversational interface, instead of navigating separate internal portals.
 
 Built incrementally as a 12-phase learning project: from a basic chatbot with no memory, up through tool calling, an explicit LangGraph agent, enforced human-in-the-loop confirmation, RAG-based policy search, a full multi-agent architecture, and production concerns like logging, retries, and tracing. Full phase-by-phase breakdown in [`docs/phase-notes.md`](docs/phase-notes.md).
 
